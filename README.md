@@ -20,7 +20,7 @@ pip install -r requirements.txt
 ```
 pip install -e .
 ```
-5.) Create models and download weights from hugging face:
+5.) Create models and download weights from hugging face: https://huggingface.co/Ashwani-0101/flask-weights-depthvisionAI
 ```
 mkdir models/
 ```
