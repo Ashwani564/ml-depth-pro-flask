@@ -1,0 +1,132 @@
+{% extends "layout.html" %}
+{% block title %}Processing...{% endblock %}
+{% block content %}
+
+<!-- This container shows while processing -->
+<div id="loading-container" class="text-center">
+    <h1 id="status-text" class="text-3xl font-bold mb-4 text-white">Initializing...</h1>
+    <div class="w-full max-w-2xl mx-auto bg-gray-700 rounded-full h-6 mb-4">
+        <div id="progress-bar" class="progress-bar-inner h-6 rounded-full text-center text-white font-bold leading-6" style="width: 0%">0%</div>
+    </div>
+    <p id="status-detail" class="text-gray-400">Requesting status from server...</p>
+    <p id="time-estimate" class="text-cyan-400 mt-2 font-mono"></p>
+</div>
+
+<!-- This container is hidden initially and shown when complete -->
+<div id="result-container" class="hidden">
+    <h1 class="text-3xl font-bold mb-2 text-white text-center">Processing Complete!</h1>
+    
+    <!-- MODIFICATION: Add a container for the total time taken -->
+    <div id="total-time-display" class="text-center text-lg text-gray-300 mt-2 mb-6"></div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div class="card p-4 rounded-lg">
+            <h2 class="text-xl font-bold mb-2 text-center text-cyan-400">Original Input</h2>
+            <div id="input-preview"></div>
+        </div>
+        <div class="card p-4 rounded-lg">
+            <h2 class="text-xl font-bold mb-2 text-center text-cyan-400">Processed Output</h2>
+            <div id="output-preview"></div>
+        </div>
+    </div>
+    <div class="text-center mt-8">
+        <a href="/" class="btn-primary font-bold py-2 px-4 rounded-lg">Process Another File</a>
+    </div>
+</div>
+
+<script>
+    console.log("--- DepthVision AI Debug Script Loaded ---");
+    const taskId = "{{ task_id }}";
+
+    // ... (find all elements as before) ...
+    const loadingContainer = document.getElementById('loading-container');
+    const statusText = document.getElementById('status-text');
+    const progressBar = document.getElementById('progress-bar');
+    const statusDetail = document.getElementById('status-detail');
+    const timeEstimate = document.getElementById('time-estimate');
+    const resultContainer = document.getElementById('result-container');
+    const inputPreview = document.getElementById('input-preview');
+    const outputPreview = document.getElementById('output-preview');
+    // MODIFICATION: Get the new display element
+    const totalTimeDisplay = document.getElementById('total-time-display');
+
+    function pollStatus() {
+        fetch(`/status/${taskId}`)
+            .then(response => response.json())
+            .then(data => {
+                console.log("Received data from server:", data);
+                
+                const progress = Math.round(data.progress || 0);
+                progressBar.style.width = progress + '%';
+                progressBar.textContent = progress + '%';
+                statusDetail.textContent = data.status;
+
+                // --- MODIFICATION: Improved Time Estimation ---
+                // Only show the estimate after 10% progress to avoid wild early guesses
+                if (progress > 10 && progress < 100 && data.start_time) {
+                    const elapsed = (new Date().getTime() / 1000) - data.start_time;
+                    const total_estimate = (elapsed / progress) * 100;
+                    const remaining = Math.round(total_estimate - elapsed);
+                    if (remaining > 0) {
+                        //timeEstimate.textContent = `About ${remaining} seconds remaining...`;
+                    }
+                }
+
+                // Check for completion
+                if (data.status === 'complete') {
+                    console.log("Task complete! Stopping poll.");
+                    clearInterval(intervalId);
+                    loadingContainer.style.display = 'none'; // Hide loading spinner
+                    displayResults(data);
+                } else if (data.status && data.status.startsWith('error')) {
+                    // ... (error handling remains the same) ...
+                }
+            })
+            .catch(err => {
+                // ... (error handling remains the same) ...
+            });
+    }
+
+    function displayResults(data) {
+        console.log("Attempting to display results with data:", data);
+        if (!data || !data.input_file || !data.output_file) {
+            // ... (error handling remains the same) ...
+            return;
+        }
+
+        // --- MODIFICATION: Display the total time taken ---
+        if (data.duration && totalTimeDisplay) {
+            totalTimeDisplay.textContent = `Total time taken: ${data.duration.toFixed(1)} seconds`;
+        }
+
+        const inputFile = data.input_file;
+        const outputFile = data.output_file;
+        const type = data.type;
+
+        if (type === 'image') {
+            inputPreview.innerHTML = `<img src="/uploads/${inputFile}" alt="Input Image" class="rounded-lg w-full h-auto">`;
+            outputPreview.innerHTML = `<img src="/processed/${outputFile}" alt="Processed Output" class="rounded-lg w-full h-auto">`;
+        } else {
+            inputPreview.innerHTML = `<video controls muted loop class="rounded-lg w-full h-auto"><source src="/uploads/${inputFile}"></video>`;
+            outputPreview.innerHTML = `<video controls muted loop class="rounded-lg w-full h-auto"><source src="/processed/${outputFile}" type="video/mp4"></video>`;
+        }
+        
+        resultContainer.classList.remove('hidden');
+    }
+document.addEventListener('click', function(e) {
+    const tap = document.createElement('div');
+    tap.className = 'mouse-tap-effect';
+    tap.style.left = e.clientX + 'px';
+    tap.style.top = e.clientY + 'px';
+    document.body.appendChild(tap);
+
+    // Remove the tap element after animation
+    tap.addEventListener('animationend', () => {
+        tap.remove();
+    });
+});
+
+    const intervalId = setInterval(pollStatus, 2000);
+    pollStatus(); // Start the first poll immediately
+</script>
+{% endblock %}

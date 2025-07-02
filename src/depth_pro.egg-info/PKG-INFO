@@ -1,0 +1,13 @@
+Metadata-Version: 2.4
+Name: depth_pro
+Version: 0.1
+Summary: Inference/Network/Model code for Apple Depth Pro monocular depth estimation.
+Project-URL: Homepage, https://github.com/apple/ml-depth-pro
+Project-URL: Repository, https://github.com/apple/ml-depth-pro
+Description-Content-Type: text/markdown
+Requires-Dist: torch
+Requires-Dist: torchvision
+Requires-Dist: timm
+Requires-Dist: numpy<2
+Requires-Dist: pillow_heif
+Requires-Dist: matplotlib
